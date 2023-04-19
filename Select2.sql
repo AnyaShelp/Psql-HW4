@@ -6,29 +6,29 @@ select g.name, count(a.name)
             on ga.artist_id = a.id
  group by g.name;
 
-select s.name, a.album_year
+select al.name, count(s.name)
+  from album as al
+       join song as s
+       on s.album_id = al.id
+ where album_year between 2019 and 2020
+ group by al.name;
+
+select a.name, avg(s.duration)
   from album as a
-       inner join song as s
+       join song as s 
        on s.album_id = a.id
- where a.album_year >= '01.01.2019' 
-   and a.album_year <= '31.12.2020';
+ group by a.name;
 
-select avg(duration) 
-  from song as s
-       join album as a 
-       on a.id = s.album_id 
- group by album_id;
-
-select name
-  from artist as a
- where a.name not in 
-       (select a.name from artist as a2 
-               inner join artist_album as aa 
-               on aa.artist_id = a2.id 
-               inner join album as al 
-               on al.id = aa.album_id  
-         where al.album_year = '2022'
-         group by a.name);
+select name 
+  from artist 
+ where name not in (
+       select a.name from artist as a
+         join artist_album as aa 
+         on a.id = aa.artist_id 
+         join album as al 
+         on aa.album_id = al.id
+        where album_year = 2020)
+ group by name;
 
 select c.name
   from compilation as c
@@ -44,19 +44,19 @@ select c.name
        on a2.id = aa.artist_id
  where a2.name like '%Eminem%';
 
-select a.name 
-  from album as a
-       left join artist_album as aa 
-       on a.id = aa.album_id
-       left join artist as ar 
-       on ar.id = aa.artist_id
-       left join artist_genre as ag 
-       on ar.id = ag.artist_id
-       left join genre as g 
-       on g.id = ag.genre_id
- group by a.name
-having count(distinct g.name) > 1
- order by a.name;
+select distinct al.name
+  from album as al
+ inner join artist_album as	aa 
+ on al.id = aa.album_id 
+ inner join artist as a 
+ on a.id = aa.artist_id
+ inner join artist_genre as ag 
+ on ag.artist_id = a.id 
+ inner join genre as g 
+ on g.id = ag.artist_id 
+ group by al.name, 
+          a.name
+having count(distinct g.name) > 1;
 
 select s.name
   from song as s
@@ -70,18 +70,22 @@ select ar.name, s.duration
        on a.id = s.album_id
        left join artist_album as aa 
        on aa.album_id = a.id
-       left join artist as ar on ar.id = aa.artist_id
- group by ar.name, s.duration
-having s.duration = 
+       left join artist as ar 
+       on ar.id = aa.artist_id
+ where s.duration = 
        (select min(duration) 
-          from song)
- order by ar.name;
+          from song);
 
-select al.name 
+select al.name, count(al.id)
   from album as al 
-  inner join song as s
-  on s.album_id = al.id
- where s.id  < (
-       select avg(album_id) 
-         from song)
- group by al.name;
+  join song as s 
+  on s.album_id = al.id 
+ group by al.name 
+having count(s.id) = (
+       select count(s.id)  
+         from album as al 
+         join song as s 
+         on s.album_id = al.id 
+ group by al.name
+ order by count(s.id)
+ limit 1)
